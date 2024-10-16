@@ -23,6 +23,9 @@ from .data.dataset_mappers.mask_former_semantic_dataset_mapper import (
     MaskFormerSemanticDatasetMapper,
 )
 
+from .data.dataset_mappers.maskformer_allo_fbseg_mapper import MaskFormerALLOFBSegDatasetMapper
+from .data.dataset_mappers.maskformer_allo_mapper import MaskFormerALLODatasetMapper
+
 # models
 from .maskformer_model import MaskFormer
 from .maskformer_model_joint_flow import MaskFormerJointFlow
