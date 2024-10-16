@@ -214,9 +214,7 @@ class MaskFormerSemanticDatasetMapperWithUNO:
         mode = "training" if is_train else "inference"
         logger.info(f"[{self.__class__.__name__}] Augmentations used in {mode}: {augmentations}")
 
-        self.vistas_mapper = create_vistas_to_cityscapes_mapper('./datasets/mapillary-vistas')
-
-        root = './datasets/ade20k/ADEChallengeData2016'
+        root = '/home/johnl/data/ADEChallengeData2016'
         self.ood_images = sorted(glob.glob(root + '/images' + '/training/*.jpg'))
         self.ood_annotations = sorted(glob.glob(root + '/annotations' + '/training/*.png'))
 

@@ -31,13 +31,15 @@ def _get_fs_laf_meta():
     return ret
 
 def load_fs_laf_val(root):
-    image_files = list(sorted(glob.glob(root + '/validation/leftImg8bit/*.png')))
+    # image_files = list(sorted(glob.glob(root + '/validation/leftImg8bit/*.png')))
+    root = "/home/johnl/data/rpl_test/fishyscapes/LostAndFound"
+    image_files = list(sorted(glob.glob(root + '/original/*.png')))
     examples = []
 
     for im_file in image_files:
         examples.append({
             "file_name": im_file,
-            "sem_seg_file_name": im_file.replace('_leftImg8bit.png', '_labels.png').replace('leftImg8bit', 'gtFine'),
+            "sem_seg_file_name": im_file.replace('original', 'labels'),
             "height": 1024,
             "width": 2048,
         })

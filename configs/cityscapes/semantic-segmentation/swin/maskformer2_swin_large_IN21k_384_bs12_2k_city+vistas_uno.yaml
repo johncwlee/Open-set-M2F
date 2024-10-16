@@ -35,11 +35,12 @@ TEST:
   EVAL_PERIOD: 1000
 
 DATASETS:
-  TRAIN: ("cityscapes_fine_sem_seg_train", "mapillary_vistas_sem_seg_train")
-  TEST: ("cityscapes_fine_sem_seg_val",)
+  TRAIN: ("cityscapes_fine_sem_seg_train",)
+  # TEST: ("cityscapes_fine_sem_seg_val",)
+  TEST: ("fs_laf_val",)
   # TEST: ("fs_laf_val", "fs_static_val", "road_anomaly")
 
 ANOMALY_DETECTOR: "UNO"
 
-OUTPUT_DIR: './M2F_SWIN-L_cityscapes+vistas_bs_12_2k_uno'
+OUTPUT_DIR: '/home/johnl/results/UNO-cityscapes'
 
