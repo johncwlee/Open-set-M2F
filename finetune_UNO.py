@@ -61,7 +61,8 @@ from mask2former import (
     MaskFormerSemanticDatasetMapperTrafficWithOE,
     MaskFormerSemanticDatasetMapperTraffic,
     MaskFormerSemanticDatasetMapperWithUNO,
-    MaskFormerSemanticDatasetMapperWithUNOOurs
+    MaskFormerSemanticDatasetMapperWithUNOOurs,
+    MaskFormerALLODatasetMapper,
 )
 
 
@@ -191,6 +192,10 @@ class Trainer(DefaultTrainer):
         # coco panoptic segmentation lsj new baseline
         elif cfg.INPUT.DATASET_MAPPER_NAME == "coco_panoptic_lsj":
             mapper = COCOPanopticNewBaselineDatasetMapper(cfg, True)
+            return build_detection_train_loader(cfg, mapper=mapper)
+        #* ALLO anomaly training
+        elif cfg.INPUT.DATASET_MAPPER_NAME == "mask_former_allo":
+            mapper = MaskFormerALLODatasetMapper(cfg, True)
             return build_detection_train_loader(cfg, mapper=mapper)
         else:
             mapper = None

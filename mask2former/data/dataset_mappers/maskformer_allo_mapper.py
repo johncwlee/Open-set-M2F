@@ -1,6 +1,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import copy
 import logging
+from pathlib import Path
+import random
+import os
+import json
 
 import numpy as np
 import torch
@@ -48,6 +52,12 @@ class MaskFormerALLODatasetMapper:
         logger = logging.getLogger(__name__)
         mode = "training" if is_train else "inference"
         logger.info(f"[{self.__class__.__name__}] Augmentations used in {mode}: {augmentations}")
+        
+        ade_root = Path("/home/johnl/data/ADEChallengeData2016")
+        self.ood_images = [str(img) for img in sorted(ade_root.glob("images/training/*.jpg"))]
+        self.ood_annotations = [str(img) for img in sorted(ade_root.glob("annotations/training/*.png"))]
+
+        self.ood_classes_per_item = 3
 
     @classmethod
     def from_config(cls, cfg, is_train=True):
@@ -70,7 +80,8 @@ class MaskFormerALLODatasetMapper:
             )
         if cfg.INPUT.COLOR_AUG_SSD:
             augs.append(ColorAugSSDTransform(img_format=cfg.INPUT.FORMAT))
-        augs.append(T.RandomFlip(vertical=True, horizontal=True))
+        augs.append(T.RandomFlip(horizontal=True, vertical=False))
+        augs.append(T.RandomFlip(vertical=True, horizontal=False))
 
         # Assume always applies to the training set.
         dataset_names = cfg.DATASETS.TRAIN
@@ -86,6 +97,22 @@ class MaskFormerALLODatasetMapper:
         }
         return ret
 
+    def check_allo_mask_values(self, mask: np.ndarray) -> bool:
+        """Check if the mask contains valid values."""
+        allowed = np.array([0, 1, 255])
+        valid = np.all(np.isin(np.unique(mask), allowed))
+        return valid
+
+    def _paste_anomaly(self, x, label, ood_patch, ood_lbl, ood_id):
+        p_h, p_w, _ = ood_patch.shape
+        h, w, _ = x.shape
+        pos_i = random.randint(0, h - p_h)
+        pos_j = random.randint(0, w - p_w)
+        for i in range(3):
+            x[pos_i: pos_i + p_h, pos_j: pos_j + p_w, i] = x[pos_i: pos_i + p_h, pos_j: pos_j + p_w, i] * (1 - ood_lbl) + ood_lbl * ood_patch[:, :, i]
+        label[pos_i: pos_i + p_h, pos_j: pos_j + p_w][ood_lbl == 1] = ood_id
+        return x, label
+
     def __call__(self, dataset_dict):
         """
         Args:
@@ -100,18 +127,33 @@ class MaskFormerALLODatasetMapper:
         image = utils.read_image(dataset_dict["file_name"], format=self.img_format)
         utils.check_image_size(dataset_dict, image)
 
-        if "sem_seg_file_name" in dataset_dict:
-            # PyTorch transformation not implemented for uint16, so converting it to double first
-            sem_seg_gt = utils.read_image(dataset_dict.pop("sem_seg_file_name")).astype("double")
-        else:
-            sem_seg_gt = None
+        sem_seg_gt = utils.read_image(dataset_dict.pop("sem_seg_file_name")).astype("double")
 
-        if sem_seg_gt is None:
-            raise ValueError(
-                "Cannot find 'sem_seg_file_name' for semantic segmentation dataset {}.".format(
-                    dataset_dict["file_name"]
-                )
-            )
+        #* Verify and transform ALLO labels
+        assert self.check_allo_mask_values(sem_seg_gt), "Invalid mask values found in ALLO training dataset."
+        sem_seg_gt = np.where(sem_seg_gt == 0, 0.0, 1.0)
+        
+        ## paste outlier
+        idx = np.random.randint(len(self.ood_images))
+        ood_image = utils.read_image(self.ood_images[idx], format=self.img_format)
+        ood_lbl = utils.read_image(self.ood_annotations[idx])
+
+        ood_size = np.random.randint(96, 500)
+        factor = ood_size / max(ood_lbl.shape)
+        if factor < 1.:
+            ood_image = torch.nn.functional.interpolate(torch.from_numpy(ood_image).float().permute(2, 0, 1).unsqueeze(0), scale_factor=factor)[0].permute(1, 2, 0).long().numpy()
+            ood_lbl = torch.nn.functional.interpolate(torch.from_numpy(ood_lbl).unsqueeze(0).unsqueeze(0), scale_factor=factor, mode='nearest')[0, 0].numpy()
+        ood_image = np.uint8(ood_image)
+        ood_lbl = ood_lbl.astype("double")
+
+        unique_lbls = np.unique(ood_lbl)
+        for c in np.random.choice(unique_lbls, self.ood_classes_per_item):
+            binary_ood_lbl = np.zeros_like(ood_lbl)
+            binary_ood_lbl[ood_lbl == c] = 1
+            binary_ood_lbl = np.uint8(binary_ood_lbl)
+            image = image.copy()
+            sem_seg_gt = sem_seg_gt.copy()
+            image, sem_seg_gt = self._paste_anomaly(image, sem_seg_gt, ood_image, binary_ood_lbl, 2)
 
         aug_input = T.AugInput(image, sem_seg=sem_seg_gt)
         aug_input, transforms = T.apply_transform_gens(self.tfm_gens, aug_input)
