@@ -70,7 +70,8 @@ class MaskFormerALLOFBSegDatasetMapper:
             )
         if cfg.INPUT.COLOR_AUG_SSD:
             augs.append(ColorAugSSDTransform(img_format=cfg.INPUT.FORMAT))
-        augs.append(T.RandomFlip())
+        augs.append(T.RandomFlip(horizontal=True, vertical=False))
+        augs.append(T.RandomFlip(vertical=True, horizontal=False))
 
         # Assume always applies to the training set.
         dataset_names = cfg.DATASETS.TRAIN
