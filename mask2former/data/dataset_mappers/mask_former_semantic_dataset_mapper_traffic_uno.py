@@ -194,6 +194,7 @@ class MaskFormerSemanticDatasetMapperWithUNO:
         image_format,
         ignore_label,
         size_divisibility,
+        labels_mapping=None
     ):
         """
         NOTE: this interface is experimental.
@@ -209,10 +210,14 @@ class MaskFormerSemanticDatasetMapperWithUNO:
         self.img_format = image_format
         self.ignore_label = ignore_label
         self.size_divisibility = size_divisibility
+        self.labels_mapping = labels_mapping
 
         logger = logging.getLogger(__name__)
         mode = "training" if is_train else "inference"
         logger.info(f"[{self.__class__.__name__}] Augmentations used in {mode}: {augmentations}")
+        
+        # self.vistas_mapper = create_vistas_to_cityscapes_mapper("/home/johnl/data/vistas")
+        self.labels_mapping = torch.cat([self.labels_mapping, torch.tensor([19])], dim=0)
 
         root = '/home/johnl/data/ADEChallengeData2016'
         self.ood_images = sorted(glob.glob(root + '/images' + '/training/*.jpg'))
@@ -247,6 +252,11 @@ class MaskFormerSemanticDatasetMapperWithUNO:
         dataset_names = cfg.DATASETS.TRAIN
         meta = MetadataCatalog.get(dataset_names[0])
         ignore_label = meta.ignore_label
+        
+        if "labels_mapping" in meta.as_dict():
+            labels_mapping = torch.tensor(meta.labels_mapping)
+        else:
+            labels_mapping = None
 
         ret = {
             "is_train": is_train,
@@ -254,6 +264,7 @@ class MaskFormerSemanticDatasetMapperWithUNO:
             "image_format": cfg.INPUT.FORMAT,
             "ignore_label": ignore_label,
             "size_divisibility": cfg.INPUT.SIZE_DIVISIBILITY,
+            "labels_mapping": labels_mapping
         }
         return ret
 
@@ -314,7 +325,7 @@ class MaskFormerSemanticDatasetMapperWithUNO:
             binary_ood_lbl[ood_lbl == c] = 1
             binary_ood_lbl = np.uint8(binary_ood_lbl)
             if 'vistas' in sem_seg_file_name:
-                image, sem_seg_gt = self._paste_anomaly(image, sem_seg_gt, ood_image, binary_ood_lbl, 67)
+                image, sem_seg_gt = self._paste_anomaly(image, sem_seg_gt, ood_image, binary_ood_lbl, 19)
             else:
                 image, sem_seg_gt = self._paste_anomaly(image, sem_seg_gt, ood_image, binary_ood_lbl, 19)
         ##
@@ -352,7 +363,7 @@ class MaskFormerSemanticDatasetMapperWithUNO:
             dataset_dict["sem_seg"] = sem_seg_gt.long()
 
         if 'vistas' in sem_seg_file_name:
-            sem_seg_gt = self.vistas_mapper[sem_seg_gt.long()]
+            sem_seg_gt = self.labels_mapping[sem_seg_gt.long()]
             dataset_dict["sem_seg"] = sem_seg_gt
         elif 'wilddash' in sem_seg_file_name:
             sem_seg_gt = self.wilddash_mapper[sem_seg_gt.long()]

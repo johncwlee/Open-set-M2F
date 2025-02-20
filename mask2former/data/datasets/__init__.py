@@ -7,5 +7,6 @@ from . import (
     register_fs_laf,
     # register_fs_static,
     # register_road_anomaly,
+    register_vistas,
     register_allo,
 )
