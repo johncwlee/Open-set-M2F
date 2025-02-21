@@ -44,7 +44,7 @@ def load_road_anomaly(root):
         })
     return examples
 def register_road_anomaly(root):
-    root = os.path.join(root, "road_anomaly")
+    root = os.path.join(root, "RoadAnomaly")
     meta = _get_ra_meta()
 
     DatasetCatalog.register(

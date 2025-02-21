@@ -64,6 +64,41 @@ _wd_to_city_mappings = [
 ( 37 , 255 ),
 ( 38 , 0 )
 ]
+ade_classes=('wall', 'building', 'sky', 'floor', 'tree', 'ceiling', 'road',
+            'bed ', 'windowpane', 'grass', 'cabinet', 'sidewalk',
+            'person', 'earth', 'door', 'table', 'mountain', 'plant',
+            'curtain', 'chair', 'car', 'water', 'painting', 'sofa',
+            'shelf', 'house', 'sea', 'mirror', 'rug', 'field', 'armchair',
+            'seat', 'fence', 'desk', 'rock', 'wardrobe', 'lamp',
+            'bathtub', 'railing', 'cushion', 'base', 'box', 'column',
+            'signboard', 'chest of drawers', 'counter', 'sand', 'sink',
+            'skyscraper', 'fireplace', 'refrigerator', 'grandstand',
+            'path', 'stairs', 'runway', 'case', 'pool table', 'pillow',
+            'screen door', 'stairway', 'river', 'bridge', 'bookcase',
+            'blind', 'coffee table', 'toilet', 'flower', 'book', 'hill',
+            'bench', 'countertop', 'stove', 'palm', 'kitchen island',
+            'computer', 'swivel chair', 'boat', 'bar', 'arcade machine',
+            'hovel', 'bus', 'towel', 'light', 'truck', 'tower',
+            'chandelier', 'awning', 'streetlight', 'booth',
+            'television receiver', 'airplane', 'dirt track', 'apparel',
+            'pole', 'land', 'bannister', 'escalator', 'ottoman', 'bottle',
+            'buffet', 'poster', 'stage', 'van', 'ship', 'fountain',
+            'conveyer belt', 'canopy', 'washer', 'plaything',
+            'swimming pool', 'stool', 'barrel', 'basket', 'waterfall',
+            'tent', 'bag', 'minibike', 'cradle', 'oven', 'ball', 'food',
+            'step', 'tank', 'trade name', 'microwave', 'pot', 'animal',
+            'bicycle', 'lake', 'dishwasher', 'screen', 'blanket',
+            'sculpture', 'hood', 'sconce', 'vase', 'traffic light',
+            'tray', 'ashcan', 'fan', 'pier', 'crt screen', 'plate',
+            'monitor', 'bulletin board', 'shower', 'radiator', 'glass',
+            'clock', 'flag')
+ade_skip_classes = (
+    'animal', 'box', 'basket', 'barrel', 'bag', 'bottle', 'tray', 'plaything', 
+    'ball', 'hovel', 'vase', 'flower', 'minibike', 'bicycle', 'rock', 
+    'ashcan', 'apparel', 'pot', 'case'
+)
+ade_skip_labels = [126, 41, 112, 111, 115, 98, 137, 108, 119, 
+                   79, 135, 66, 116, 127, 34, 138, 92, 125, 55]
 
 _vistas_to_cityscapes = {
     'construction--barrier--curb': 'sidewalk',
@@ -224,6 +259,7 @@ class MaskFormerSemanticDatasetMapperWithUNO:
         self.ood_annotations = sorted(glob.glob(root + '/annotations' + '/training/*.png'))
 
         self.ood_classes_per_item = 3
+        self.skip_labels = np.array(ade_skip_labels)
 
     @classmethod
     def from_config(cls, cfg, is_train=True):
@@ -310,6 +346,19 @@ class MaskFormerSemanticDatasetMapperWithUNO:
         idx = np.random.randint(len(self.ood_images))
         ood_image = utils.read_image(self.ood_images[idx], format=self.img_format)
         ood_lbl = utils.read_image(self.ood_annotations[idx])
+        unique_lbls = np.unique(ood_lbl)
+        
+        #? Only use images with specified classes (comment this if you want to use all classes)
+        # filtered_lbls = unique_lbls[~np.isin(unique_lbls, self.skip_labels)]
+        # unique_lbls = filtered_lbls #* comment this if you want to use all classes
+        # while len(unique_lbls) < self.ood_classes_per_item:
+        #     idx = np.random.randint(len(self.ood_images))
+        #     ood_image = utils.read_image(self.ood_images[idx], format=self.img_format)
+        #     ood_lbl = utils.read_image(self.ood_annotations[idx])
+        #     unique_lbls = np.unique(ood_lbl)
+        #     filtered_lbls = unique_lbls[~np.isin(unique_lbls, self.skip_labels)]
+        #     unique_lbls = filtered_lbls
+        #? ----------------------------
 
         ood_size = np.random.randint(96, 500)
         factor = ood_size / max(ood_lbl.shape)
@@ -319,7 +368,6 @@ class MaskFormerSemanticDatasetMapperWithUNO:
         ood_image = np.uint8(ood_image)
         ood_lbl = ood_lbl.astype("double")
 
-        unique_lbls = np.unique(ood_lbl)
         for c in np.random.choice(unique_lbls, self.ood_classes_per_item):
             binary_ood_lbl = np.zeros_like(ood_lbl)
             binary_ood_lbl[ood_lbl == c] = 1
