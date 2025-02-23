@@ -42,9 +42,9 @@ INPUT:
   COLOR_AUG_SSD: True
   SIZE_DIVISIBILITY: -1
   FORMAT: "RGB"
-  DATASET_MAPPER_NAME: "mask_former_semantic"
+  DATASET_MAPPER_NAME: "mask_former_allo"
 TEST:
-  EVAL_PERIOD: 10000  #TODO: set it high enough so that it doesn't run during training
+  EVAL_PERIOD: 5000  #TODO: set it high enough so that it doesn't run during training
   AUG:
     ENABLED: False
     # MIN_SIZES: [512, 768, 1024, 1280, 1536, 1792]

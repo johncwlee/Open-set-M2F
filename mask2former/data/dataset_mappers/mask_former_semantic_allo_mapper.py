@@ -13,10 +13,10 @@ from detectron2.data import transforms as T
 from detectron2.projects.point_rend import ColorAugSSDTransform
 from detectron2.structures import BitMasks, Instances
 
-__all__ = ["MaskFormerALLOFBSegDatasetMapper"]
+__all__ = ["MaskFormerALLOSemanticDatasetMapper"]
 
 
-class MaskFormerALLOFBSegDatasetMapper:
+class MaskFormerALLOSemanticDatasetMapper:
     """
     """
 
@@ -71,7 +71,7 @@ class MaskFormerALLOFBSegDatasetMapper:
         if cfg.INPUT.COLOR_AUG_SSD:
             augs.append(ColorAugSSDTransform(img_format=cfg.INPUT.FORMAT))
         augs.append(T.RandomFlip(horizontal=True, vertical=False))
-        augs.append(T.RandomFlip(vertical=True, horizontal=False))
+        augs.append(T.RandomFlip(horizontal=False, vertical=True))
 
         # Assume always applies to the training set.
         dataset_names = cfg.DATASETS.TRAIN
@@ -87,11 +87,11 @@ class MaskFormerALLOFBSegDatasetMapper:
         }
         return ret
 
-    def check_allo_mask_values(self, mask: np.ndarray) -> bool:
-        """Check if the mask contains valid values."""
-        allowed = np.array([0, 1, 255])
-        valid = np.all(np.isin(np.unique(mask), allowed))
-        return valid
+    # def check_allo_mask_values(self, mask: np.ndarray) -> bool:
+    #     """Check if the mask contains valid values."""
+    #     allowed = np.array([0, 1, 255])
+    #     valid = np.all(np.isin(np.unique(mask), allowed))
+    #     return valid
 
     def __call__(self, dataset_dict):
         """
@@ -119,11 +119,15 @@ class MaskFormerALLOFBSegDatasetMapper:
                     dataset_dict["file_name"]
                 )
             )
-        
-        #* Verify and transform ALLO labels for FBSeg
-        assert self.check_allo_mask_values(sem_seg_gt), "Invalid mask values found in ALLO training dataset."
-        sem_seg_gt = np.where(sem_seg_gt == 0, 0.0, 1.0)
 
+        #* Verify and transform ALLO labels
+        # assert self.check_allo_mask_values(sem_seg_gt), "Invalid mask values found in ALLO training dataset."
+        # sem_seg_gt = np.where(sem_seg_gt == 0, 0.0, 1.0)
+
+        if len(sem_seg_gt.shape) == 3:
+            assert sem_seg_gt.shape[2] == 3, \
+                f"Assumed sem_seg_gt would have 3 channels, got {sem_seg_gt.shape}"
+            sem_seg_gt = sem_seg_gt[:, :, 0]
         aug_input = T.AugInput(image, sem_seg=sem_seg_gt)
         aug_input, transforms = T.apply_transform_gens(self.tfm_gens, aug_input)
         image = aug_input.image
@@ -176,6 +180,7 @@ class MaskFormerALLOFBSegDatasetMapper:
                 # Some image does not have annotation (all ignored)
                 instances.gt_masks = torch.zeros((0, sem_seg_gt.shape[-2], sem_seg_gt.shape[-1]))
             else:
+                
                 masks = BitMasks(
                     torch.stack([torch.from_numpy(np.ascontiguousarray(x.copy())) for x in masks])
                 )

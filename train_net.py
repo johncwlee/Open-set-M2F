@@ -60,8 +60,7 @@ from mask2former import (
     DenseOODDetectionEvaluatorUNO,
     MaskFormerSemanticDatasetMapperTrafficWithOE,
     MaskFormerSemanticDatasetMapperTraffic,
-    MaskFormerALLODatasetMapper,
-    MaskFormerALLOFBSegDatasetMapper
+    MaskFormerALLOSemanticDatasetMapper
 )
 
 
@@ -189,13 +188,9 @@ class Trainer(DefaultTrainer):
         elif cfg.INPUT.DATASET_MAPPER_NAME == "coco_panoptic_lsj":
             mapper = COCOPanopticNewBaselineDatasetMapper(cfg, True)
             return build_detection_train_loader(cfg, mapper=mapper)
-        #* ALLO fbseg training
-        elif cfg.INPUT.DATASET_MAPPER_NAME == "mask_former_allo_fbseg":
-            mapper = MaskFormerALLOFBSegDatasetMapper(cfg, True)
-            return build_detection_train_loader(cfg, mapper=mapper)
-        #* ALLO anomaly training
+        #* ALLO
         elif cfg.INPUT.DATASET_MAPPER_NAME == "mask_former_allo":
-            mapper = MaskFormerALLODatasetMapper(cfg, True)
+            mapper = MaskFormerALLOSemanticDatasetMapper(cfg, True)
             return build_detection_train_loader(cfg, mapper=mapper)
         else:
             mapper = None
