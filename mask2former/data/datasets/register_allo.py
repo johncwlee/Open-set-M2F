@@ -38,7 +38,7 @@ def load_allo_train(root):
 
 def load_allo_seg_val(root):
     root_ = Path(root) / "test_v3"
-    image_files = [str(img) for img in sorted(root_.glob('**/normal/Camera*/images/*.png'))][:100]
+    image_files = [str(img) for img in sorted(root_.glob('**/normal/Camera*/images/*.png'))]
     examples = []
 
     for im_file in image_files:
