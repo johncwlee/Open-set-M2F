@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import os
 from pathlib import Path
+import random
 from detectron2.data import DatasetCatalog, MetadataCatalog
 
 ALLO_SEM_SEG_CATEGORIES = [
@@ -53,8 +54,11 @@ def load_allo_seg_val(root):
 def load_allo_anomaly_val(root):
     root_ = Path(root) / "test_v3"
     image_files = [str(img) for img in sorted(root_.glob('**/images/*.png'))]
+    random.shuffle(image_files)
+    image_files = image_files[:200]
     examples = []
 
+    #* Take a subset to not run out of memory during evaluation
     for im_file in image_files:
         examples.append({
             "file_name": im_file,

@@ -29,6 +29,6 @@ SOLVER:
 DATALOADER:
   NUM_WORKERS: 8  #* 4
 TEST:
-  EVAL_PERIOD: 100  #TODO: set it high enough so that it doesn't run during training
+  EVAL_PERIOD: 5000
 
 OUTPUT_DIR: './results/m2former_allo'

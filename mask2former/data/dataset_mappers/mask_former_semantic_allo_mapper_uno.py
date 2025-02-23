@@ -1,14 +1,12 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import copy
 import logging
-from pathlib import Path
-import random
-import os
-import json
 
 import numpy as np
 import torch
 from torch.nn import functional as F
+import glob
+import random
 
 from detectron2.config import configurable
 from detectron2.data import MetadataCatalog
@@ -17,11 +15,57 @@ from detectron2.data import transforms as T
 from detectron2.projects.point_rend import ColorAugSSDTransform
 from detectron2.structures import BitMasks, Instances
 
-__all__ = ["MaskFormerALLODatasetMapper"]
+__all__ = ["MaskFormerALLOSemanticDatasetMapperWithUNO"]
 
 
-class MaskFormerALLODatasetMapper:
+ade_classes=('wall', 'building', 'sky', 'floor', 'tree', 'ceiling', 'road',
+            'bed ', 'windowpane', 'grass', 'cabinet', 'sidewalk',
+            'person', 'earth', 'door', 'table', 'mountain', 'plant',
+            'curtain', 'chair', 'car', 'water', 'painting', 'sofa',
+            'shelf', 'house', 'sea', 'mirror', 'rug', 'field', 'armchair',
+            'seat', 'fence', 'desk', 'rock', 'wardrobe', 'lamp',
+            'bathtub', 'railing', 'cushion', 'base', 'box', 'column',
+            'signboard', 'chest of drawers', 'counter', 'sand', 'sink',
+            'skyscraper', 'fireplace', 'refrigerator', 'grandstand',
+            'path', 'stairs', 'runway', 'case', 'pool table', 'pillow',
+            'screen door', 'stairway', 'river', 'bridge', 'bookcase',
+            'blind', 'coffee table', 'toilet', 'flower', 'book', 'hill',
+            'bench', 'countertop', 'stove', 'palm', 'kitchen island',
+            'computer', 'swivel chair', 'boat', 'bar', 'arcade machine',
+            'hovel', 'bus', 'towel', 'light', 'truck', 'tower',
+            'chandelier', 'awning', 'streetlight', 'booth',
+            'television receiver', 'airplane', 'dirt track', 'apparel',
+            'pole', 'land', 'bannister', 'escalator', 'ottoman', 'bottle',
+            'buffet', 'poster', 'stage', 'van', 'ship', 'fountain',
+            'conveyer belt', 'canopy', 'washer', 'plaything',
+            'swimming pool', 'stool', 'barrel', 'basket', 'waterfall',
+            'tent', 'bag', 'minibike', 'cradle', 'oven', 'ball', 'food',
+            'step', 'tank', 'trade name', 'microwave', 'pot', 'animal',
+            'bicycle', 'lake', 'dishwasher', 'screen', 'blanket',
+            'sculpture', 'hood', 'sconce', 'vase', 'traffic light',
+            'tray', 'ashcan', 'fan', 'pier', 'crt screen', 'plate',
+            'monitor', 'bulletin board', 'shower', 'radiator', 'glass',
+            'clock', 'flag')
+ade_skip_classes = (
+    'refrigerator', 'screen door', 'blind', 'bar', 'computer', 'television receiver', 
+    'apparel', 'pole', 'washer', 'microwave', 'blanket', 'ashcan', 'monitor', 'shower',
+    'oven', 'rug', 'arcade machine'
+)
+ade_skip_labels = [50, 58, 63, 77, 74, 89, 92, 93, 107, 
+                   124, 131, 138, 143, 145, 118, 28, 78]
+
+
+class MaskFormerALLOSemanticDatasetMapperWithUNO:
     """
+    A callable which takes a dataset dict in Detectron2 Dataset format,
+    and map it into a format used by MaskFormer for semantic segmentation.
+
+    The callable currently does the following:
+
+    1. Read the image from "file_name"
+    2. Applies geometric transforms to the image and annotation
+    3. Find and applies suitable cropping to the image and annotation
+    4. Prepare image and annotation to Tensors
     """
 
     @configurable
@@ -33,6 +77,7 @@ class MaskFormerALLODatasetMapper:
         image_format,
         ignore_label,
         size_divisibility,
+        labels_mapping=None
     ):
         """
         NOTE: this interface is experimental.
@@ -48,16 +93,18 @@ class MaskFormerALLODatasetMapper:
         self.img_format = image_format
         self.ignore_label = ignore_label
         self.size_divisibility = size_divisibility
+        self.labels_mapping = labels_mapping
 
         logger = logging.getLogger(__name__)
         mode = "training" if is_train else "inference"
         logger.info(f"[{self.__class__.__name__}] Augmentations used in {mode}: {augmentations}")
-        
-        ade_root = Path("/home/johnl/data/ADEChallengeData2016")
-        self.ood_images = [str(img) for img in sorted(ade_root.glob("images/training/*.jpg"))]
-        self.ood_annotations = [str(img) for img in sorted(ade_root.glob("annotations/training/*.png"))]
+
+        root = '/home/johnl/data/ADEChallengeData2016'
+        self.ood_images = sorted(glob.glob(root + '/images' + '/training/*.jpg'))
+        self.ood_annotations = sorted(glob.glob(root + '/annotations' + '/training/*.png'))
 
         self.ood_classes_per_item = 3
+        self.skip_labels = np.array(ade_skip_labels)
 
     @classmethod
     def from_config(cls, cfg, is_train=True):
@@ -81,12 +128,17 @@ class MaskFormerALLODatasetMapper:
         if cfg.INPUT.COLOR_AUG_SSD:
             augs.append(ColorAugSSDTransform(img_format=cfg.INPUT.FORMAT))
         augs.append(T.RandomFlip(horizontal=True, vertical=False))
-        augs.append(T.RandomFlip(vertical=True, horizontal=False))
+        augs.append(T.RandomFlip(horizontal=False, vertical=True))
 
         # Assume always applies to the training set.
         dataset_names = cfg.DATASETS.TRAIN
         meta = MetadataCatalog.get(dataset_names[0])
         ignore_label = meta.ignore_label
+        
+        if "labels_mapping" in meta.as_dict():
+            labels_mapping = torch.tensor(meta.labels_mapping)
+        else:
+            labels_mapping = None
 
         ret = {
             "is_train": is_train,
@@ -94,14 +146,9 @@ class MaskFormerALLODatasetMapper:
             "image_format": cfg.INPUT.FORMAT,
             "ignore_label": ignore_label,
             "size_divisibility": cfg.INPUT.SIZE_DIVISIBILITY,
+            "labels_mapping": labels_mapping
         }
         return ret
-
-    def check_allo_mask_values(self, mask: np.ndarray) -> bool:
-        """Check if the mask contains valid values."""
-        allowed = np.array([0, 1, 255])
-        valid = np.all(np.isin(np.unique(mask), allowed))
-        return valid
 
     def _paste_anomaly(self, x, label, ood_patch, ood_lbl, ood_id):
         p_h, p_w, _ = ood_patch.shape
@@ -121,22 +168,43 @@ class MaskFormerALLODatasetMapper:
         Returns:
             dict: a format that builtin models in detectron2 accept
         """
-        assert self.is_train, "MaskFormerALLODatasetMapper should only be used for training!"
+        assert self.is_train, "MaskFormerSemanticDatasetMapper should only be used for training!"
 
         dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
-        image = utils.read_image(dataset_dict["file_name"], format=self.img_format)
+        image = utils.read_image(dataset_dict["file_name"], format=self.img_format).copy()
         utils.check_image_size(dataset_dict, image)
 
-        sem_seg_gt = utils.read_image(dataset_dict.pop("sem_seg_file_name")).astype("double")
+        sem_seg_file_name = dataset_dict["sem_seg_file_name"] if "sem_seg_file_name" in dataset_dict else None
+        if "sem_seg_file_name" in dataset_dict:
+            # PyTorch transformation not implemented for uint16, so converting it to double first
+            sem_seg_gt = utils.read_image(dataset_dict.pop("sem_seg_file_name")).astype("double")
+        else:
+            sem_seg_gt = None
 
-        #* Verify and transform ALLO labels
-        assert self.check_allo_mask_values(sem_seg_gt), "Invalid mask values found in ALLO training dataset."
-        sem_seg_gt = np.where(sem_seg_gt == 0, 0.0, 1.0)
+        if sem_seg_gt is None:
+            raise ValueError(
+                "Cannot find 'sem_seg_file_name' for semantic segmentation dataset {}.".format(
+                    dataset_dict["file_name"]
+                )
+            )
         
         ## paste outlier
         idx = np.random.randint(len(self.ood_images))
         ood_image = utils.read_image(self.ood_images[idx], format=self.img_format)
         ood_lbl = utils.read_image(self.ood_annotations[idx])
+        unique_lbls = np.unique(ood_lbl)
+        
+        #? Only use images with specified classes (comment this if you want to use all classes)
+        filtered_lbls = unique_lbls[~np.isin(unique_lbls, self.skip_labels)]
+        unique_lbls = filtered_lbls #* comment this if you want to use all classes
+        while len(unique_lbls) < self.ood_classes_per_item:
+            idx = np.random.randint(len(self.ood_images))
+            ood_image = utils.read_image(self.ood_images[idx], format=self.img_format)
+            ood_lbl = utils.read_image(self.ood_annotations[idx])
+            unique_lbls = np.unique(ood_lbl)
+            filtered_lbls = unique_lbls[~np.isin(unique_lbls, self.skip_labels)]
+            unique_lbls = filtered_lbls
+        #? ----------------------------
 
         ood_size = np.random.randint(96, 500)
         factor = ood_size / max(ood_lbl.shape)
@@ -146,14 +214,12 @@ class MaskFormerALLODatasetMapper:
         ood_image = np.uint8(ood_image)
         ood_lbl = ood_lbl.astype("double")
 
-        unique_lbls = np.unique(ood_lbl)
         for c in np.random.choice(unique_lbls, self.ood_classes_per_item):
             binary_ood_lbl = np.zeros_like(ood_lbl)
             binary_ood_lbl[ood_lbl == c] = 1
             binary_ood_lbl = np.uint8(binary_ood_lbl)
-            image = image.copy()
-            sem_seg_gt = sem_seg_gt.copy()
-            image, sem_seg_gt = self._paste_anomaly(image, sem_seg_gt, ood_image, binary_ood_lbl, 2)
+            image, sem_seg_gt = self._paste_anomaly(image, sem_seg_gt, ood_image, binary_ood_lbl, 8)
+        ##
 
         aug_input = T.AugInput(image, sem_seg=sem_seg_gt)
         aug_input, transforms = T.apply_transform_gens(self.tfm_gens, aug_input)

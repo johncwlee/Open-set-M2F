@@ -157,11 +157,20 @@ class DenseOODDetectionEvaluatorUNO(DatasetEvaluator):
             v = (mask_pred * s_x.view(-1, 1, 1)).sum(0)
             ood_score = - v.to(self._cpu_device)
 
-            gt_filename = self.input_file_to_gt_file[input["file_name"]]
-            gt = self.sem_seg_loading_fn(gt_filename, dtype=np.int64)
-            gt_vec = torch.from_numpy(gt).view(-1)
+            if "sem_seg" not in input:
+                gt_filename = self.input_file_to_gt_file[input["file_name"]]
+                gt = self.sem_seg_loading_fn(gt_filename, dtype=np.int64)
+            else:
+                gt = input["sem_seg"]
+            if isinstance(gt, torch.Tensor):
+                gt_vec = gt.view(-1)
+            else:
+                gt_vec = torch.from_numpy(gt).view(-1)
             if self._dataset_name == 'road_anomaly':
                 gt_vec[gt_vec == 2] = 1
+            elif self._dataset_name == "allo_anomaly_val":
+                gt_vec[gt_vec < 8] = 0
+                gt_vec[gt_vec == 8] = 1
 
             self._ood_score += [ood_score.view(-1)[gt_vec != self._ignore_label]]
             self._gt += [gt_vec[gt_vec != self._ignore_label]]

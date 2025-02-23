@@ -20,6 +20,8 @@ import os
 from collections import OrderedDict
 from typing import Any, Dict, List, Set
 
+import random
+import numpy as np
 import torch
 
 import detectron2.utils.comm as comm
@@ -61,8 +63,7 @@ from mask2former import (
     MaskFormerSemanticDatasetMapperTrafficWithOE,
     MaskFormerSemanticDatasetMapperTraffic,
     MaskFormerSemanticDatasetMapperWithUNO,
-    MaskFormerSemanticDatasetMapperWithUNOOurs,
-    MaskFormerALLODatasetMapper,
+    MaskFormerALLOSemanticDatasetMapperWithUNO
 )
 
 
@@ -195,7 +196,7 @@ class Trainer(DefaultTrainer):
             return build_detection_train_loader(cfg, mapper=mapper)
         #* ALLO anomaly training
         elif cfg.INPUT.DATASET_MAPPER_NAME == "mask_former_allo":
-            mapper = MaskFormerALLODatasetMapper(cfg, True)
+            mapper = MaskFormerALLOSemanticDatasetMapperWithUNO(cfg, True)
             return build_detection_train_loader(cfg, mapper=mapper)
         else:
             mapper = None
@@ -326,6 +327,14 @@ def setup(args):
 
 def main(args):
     cfg = setup(args)
+    
+    #? Set the random seed
+    seed = cfg.SEED
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
 
     if args.eval_only:
         model = Trainer.build_model(cfg)
@@ -345,15 +354,24 @@ def main(args):
     weights = torch.load(cfg.MODEL.WEIGHTS)
     w = weights['model']['sem_seg_head.predictor.class_embed.bias']
     w_ = torch.cat((w[: -1], torch.tensor([0.0]).to(w.device), w[-1:]))
-    trainer.model.state_dict()['sem_seg_head.predictor.class_embed.bias'].data.copy_(w_)
+    if args.num_gpus > 1:
+        trainer.model.state_dict()['module.sem_seg_head.predictor.class_embed.bias'].data.copy_(w_)
+    else:
+        trainer.model.state_dict()['sem_seg_head.predictor.class_embed.bias'].data.copy_(w_)
 
     w = weights['model']['sem_seg_head.predictor.class_embed.weight']
     w_ = torch.cat((w[: -1], torch.zeros(1, 256).to(w.device), w[-1:]), dim=0)
-    trainer.model.state_dict()['sem_seg_head.predictor.class_embed.weight'].data.copy_(w_)
+    if args.num_gpus > 1:
+        trainer.model.state_dict()['module.sem_seg_head.predictor.class_embed.weight'].data.copy_(w_)
+    else:
+        trainer.model.state_dict()['sem_seg_head.predictor.class_embed.weight'].data.copy_(w_)
 
     w = weights['model']['criterion.empty_weight']
     w_ = torch.cat((w[: -1], torch.tensor([1.0]).to(w.device), w[-1:]))
-    trainer.model.state_dict()['criterion.empty_weight'].data.copy_(w_) 
+    if args.num_gpus > 1:
+        trainer.model.state_dict()['module.criterion.empty_weight'].data.copy_(w_)
+    else:
+        trainer.model.state_dict()['criterion.empty_weight'].data.copy_(w_) 
 
     return trainer.train()
 
