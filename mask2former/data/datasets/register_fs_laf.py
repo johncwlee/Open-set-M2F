@@ -32,14 +32,13 @@ def _get_fs_laf_meta():
 
 def load_fs_laf_val(root):
     # image_files = list(sorted(glob.glob(root + '/validation/leftImg8bit/*.png')))
-    root = "/home/johnl/data/rpl_test/fishyscapes/LostAndFound"
-    image_files = list(sorted(glob.glob(root + '/original/*.png')))
+    image_files = list(sorted(glob.glob(root + '/images/*.png')))
     examples = []
 
     for im_file in image_files:
         examples.append({
             "file_name": im_file,
-            "sem_seg_file_name": im_file.replace('original', 'labels'),
+            "sem_seg_file_name": im_file.replace('images', 'labels'),
             "height": 1024,
             "width": 2048,
         })
@@ -47,7 +46,7 @@ def load_fs_laf_val(root):
 
 
 def register_all_fs_laf(root):
-    root = os.path.join(root, "fs_lost_found")
+    root = os.path.join(root, "LostAndFound")
     meta = _get_fs_laf_meta()
 
     DatasetCatalog.register(
