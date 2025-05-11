@@ -63,7 +63,8 @@ from mask2former import (
     MaskFormerSemanticDatasetMapperTrafficWithOE,
     MaskFormerSemanticDatasetMapperTraffic,
     MaskFormerSemanticDatasetMapperWithUNO,
-    MaskFormerALLOSemanticDatasetMapperWithUNO
+    MaskFormerALLOSemanticDatasetMapperWithUNO,
+    MaskFormerALLOFBSegSemanticDatasetMapperWithUNO
 )
 
 
@@ -197,6 +198,9 @@ class Trainer(DefaultTrainer):
         #* ALLO anomaly training
         elif cfg.INPUT.DATASET_MAPPER_NAME == "mask_former_allo":
             mapper = MaskFormerALLOSemanticDatasetMapperWithUNO(cfg, True)
+            return build_detection_train_loader(cfg, mapper=mapper)
+        elif cfg.INPUT.DATASET_MAPPER_NAME == "mask_former_allo_fbseg":
+            mapper = MaskFormerALLOFBSegSemanticDatasetMapperWithUNO(cfg, True)
             return build_detection_train_loader(cfg, mapper=mapper)
         else:
             mapper = None
@@ -378,6 +382,7 @@ def main(args):
 
 if __name__ == "__main__":
     args = default_argument_parser().parse_args()
+    os.environ["DETECTRON2_DATASETS"] = "/home/data/"
     print("Command Line Args:", args)
     launch(
         main,

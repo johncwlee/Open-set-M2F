@@ -25,6 +25,8 @@ from .data.dataset_mappers.mask_former_semantic_dataset_mapper import (
 
 from .data.dataset_mappers.mask_former_semantic_allo_mapper import MaskFormerALLOSemanticDatasetMapper
 from .data.dataset_mappers.mask_former_semantic_allo_mapper_uno import MaskFormerALLOSemanticDatasetMapperWithUNO
+from .data.dataset_mappers.mask_former_semantic_allo_mapper_fbseg import MaskFormerALLOFBSegSemanticDatasetMapper
+from .data.dataset_mappers.mask_former_semantic_allo_mapper_fbseg_uno import MaskFormerALLOFBSegSemanticDatasetMapperWithUNO
 
 # models
 from .maskformer_model import MaskFormer
