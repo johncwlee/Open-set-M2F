@@ -43,6 +43,7 @@ class MaskFormer(nn.Module):
         panoptic_on: bool,
         instance_on: bool,
         test_topk_per_image: int,
+        freeze_backbone: bool = False,
     ):
         """
         Args:
@@ -92,6 +93,11 @@ class MaskFormer(nn.Module):
 
         if not self.semantic_on:
             assert self.sem_seg_postprocess_before_inference
+
+        if freeze_backbone:
+            for param in backbone.parameters():
+                param.requires_grad = False
+            backbone.eval()
 
     @classmethod
     def from_config(cls, cfg):
@@ -158,6 +164,7 @@ class MaskFormer(nn.Module):
             "instance_on": cfg.MODEL.MASK_FORMER.TEST.INSTANCE_ON,
             "panoptic_on": cfg.MODEL.MASK_FORMER.TEST.PANOPTIC_ON,
             "test_topk_per_image": cfg.TEST.DETECTIONS_PER_IMAGE,
+            "freeze_backbone": cfg.MODEL.FREEZE_BACKBONE,
         }
 
     @property

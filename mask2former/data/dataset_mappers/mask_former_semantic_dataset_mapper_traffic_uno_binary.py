@@ -15,7 +15,7 @@ from detectron2.data import transforms as T
 from detectron2.projects.point_rend import ColorAugSSDTransform
 from detectron2.structures import BitMasks, Instances
 
-__all__ = ["MaskFormerSemanticDatasetMapperTrafficWithUNO"]
+__all__ = ["MaskFormerSemanticDatasetMapperTrafficWithUNOBinary"]
 
 from cityscapesscripts.helpers.labels import labels as _labels
 
@@ -207,7 +207,7 @@ def create_wilddash_to_cityscapes_mapper():
         mapper[widl_class] = city_class
     return mapper
 
-class MaskFormerSemanticDatasetMapperWithUNO:
+class MaskFormerSemanticDatasetMapperWithUNOBinary:
     """
     A callable which takes a dataset dict in Detectron2 Dataset format,
     and map it into a format used by MaskFormer for semantic segmentation.
@@ -347,18 +347,6 @@ class MaskFormerSemanticDatasetMapperWithUNO:
         ood_image = utils.read_image(self.ood_images[idx], format=self.img_format)
         ood_lbl = utils.read_image(self.ood_annotations[idx])
         unique_lbls = np.unique(ood_lbl)
-        
-        #? Only use images with specified classes (comment this if you want to use all classes)
-        # filtered_lbls = unique_lbls[~np.isin(unique_lbls, self.skip_labels)]
-        # unique_lbls = filtered_lbls #* comment this if you want to use all classes
-        # while len(unique_lbls) < self.ood_classes_per_item:
-        #     idx = np.random.randint(len(self.ood_images))
-        #     ood_image = utils.read_image(self.ood_images[idx], format=self.img_format)
-        #     ood_lbl = utils.read_image(self.ood_annotations[idx])
-        #     unique_lbls = np.unique(ood_lbl)
-        #     filtered_lbls = unique_lbls[~np.isin(unique_lbls, self.skip_labels)]
-        #     unique_lbls = filtered_lbls
-        #? ----------------------------
 
         ood_size = np.random.randint(96, 500)
         factor = ood_size / max(ood_lbl.shape)
@@ -377,6 +365,13 @@ class MaskFormerSemanticDatasetMapperWithUNO:
             else:
                 image, sem_seg_gt = self._paste_anomaly(image, sem_seg_gt, ood_image, binary_ood_lbl, 19)
         ##
+        binary_sem_seg_gt = np.zeros_like(sem_seg_gt)
+        if 'vistas' in sem_seg_file_name:
+            binary_sem_seg_gt[sem_seg_gt == 67] = 1
+        else:
+            binary_sem_seg_gt[sem_seg_gt == 19] = 1
+        binary_sem_seg_gt[binary_sem_seg_gt == 255] = 255
+        sem_seg_gt = np.uint8(binary_sem_seg_gt)
 
         aug_input = T.AugInput(image, sem_seg=sem_seg_gt)
         aug_input, transforms = T.apply_transform_gens(self.tfm_gens, aug_input)
@@ -406,16 +401,7 @@ class MaskFormerSemanticDatasetMapperWithUNO:
         # but not efficient on large generic data structures due to the use of pickle & mp.Queue.
         # Therefore it's important to use torch.Tensor.
         dataset_dict["image"] = image
-
-        if sem_seg_gt is not None:
-            dataset_dict["sem_seg"] = sem_seg_gt.long()
-
-        if 'vistas' in sem_seg_file_name:
-            sem_seg_gt = self.labels_mapping[sem_seg_gt.long()]
-            dataset_dict["sem_seg"] = sem_seg_gt
-        elif 'wilddash' in sem_seg_file_name:
-            sem_seg_gt = self.wilddash_mapper[sem_seg_gt.long()]
-            dataset_dict["sem_seg"] = sem_seg_gt
+        dataset_dict["sem_seg"] = sem_seg_gt.long()
 
         if "annotations" in dataset_dict:
             raise ValueError("Semantic segmentation dataset should not have 'annotations'.")

@@ -27,6 +27,7 @@ def add_maskformer2_config(cfg):
     cfg.SOLVER.BACKBONE_MULTIPLIER = 0.1
 
     # mask_former model config
+    cfg.MODEL.FREEZE_BACKBONE = False
     cfg.MODEL.MASK_FORMER = CN()
 
     # loss
@@ -89,6 +90,13 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.SWIN.PATCH_NORM = True
     cfg.MODEL.SWIN.OUT_FEATURES = ["res2", "res3", "res4", "res5"]
     cfg.MODEL.SWIN.USE_CHECKPOINT = False
+
+    # dinov2 transformer backbone
+    cfg.MODEL.DINO_V2 = CN()
+    cfg.MODEL.DINO_V2.PRETRAIN_IMG_SIZE = 224
+    cfg.MODEL.DINO_V2.PATCH_SIZE = 16
+    cfg.MODEL.DINO_V2.EMBED_DIM = 1024
+    cfg.MODEL.DINO_V2.OUT_FEATURES = ["res2", "res3", "res4", "res5"]
 
     # NOTE: maskformer2 extra configs
     # transformer module
