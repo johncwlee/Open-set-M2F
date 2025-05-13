@@ -34,7 +34,6 @@ from detectron2.engine import (
 )
 from detectron2.evaluation import (
     CityscapesInstanceEvaluator,
-    CityscapesSemSegEvaluator,
     COCOEvaluator,
     COCOPanopticEvaluator,
     DatasetEvaluators,
@@ -64,6 +63,7 @@ from mask2former import (
     MaskFormerALLOFBSegSemanticDatasetMapper
 )
 
+from mask2former.evaluation.cityscapes_evaluation import CityscapesSemSegEvaluator
 
 class Trainer(DefaultTrainer):
     """

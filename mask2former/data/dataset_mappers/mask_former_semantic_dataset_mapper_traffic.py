@@ -191,6 +191,7 @@ class MaskFormerSemanticDatasetMapperTraffic:
         image_format,
         ignore_label,
         size_divisibility,
+        labels_mapping=None
     ):
         """
         NOTE: this interface is experimental.
@@ -211,7 +212,8 @@ class MaskFormerSemanticDatasetMapperTraffic:
         mode = "training" if is_train else "inference"
         logger.info(f"[{self.__class__.__name__}] Augmentations used in {mode}: {augmentations}")
 
-        self.vistas_mapper = create_vistas_to_cityscapes_mapper('./datasets/mapillary-vistas')
+        # self.vistas_mapper = create_vistas_to_cityscapes_mapper("/home/johnl/data/vistas")
+        self.labels_mapping = labels_mapping
 
         self.wilddash_mapper = create_wilddash_to_cityscapes_mapper()
 
@@ -243,12 +245,18 @@ class MaskFormerSemanticDatasetMapperTraffic:
         meta = MetadataCatalog.get(dataset_names[0])
         ignore_label = meta.ignore_label
 
+        if "labels_mapping" in meta.as_dict():
+            labels_mapping = torch.tensor(meta.labels_mapping)
+        else:
+            labels_mapping = None
+
         ret = {
             "is_train": is_train,
             "augmentations": augs,
             "image_format": cfg.INPUT.FORMAT,
             "ignore_label": ignore_label,
             "size_divisibility": cfg.INPUT.SIZE_DIVISIBILITY,
+            "labels_mapping": labels_mapping
         }
         return ret
 
@@ -313,7 +321,7 @@ class MaskFormerSemanticDatasetMapperTraffic:
             dataset_dict["sem_seg"] = sem_seg_gt.long()
 
         if 'vistas' in sem_seg_file_name:
-            sem_seg_gt = self.vistas_mapper[sem_seg_gt.long()]
+            sem_seg_gt = self.labels_mapping[sem_seg_gt.long()]
             dataset_dict["sem_seg"] = sem_seg_gt
         elif 'wilddash' in sem_seg_file_name:
             sem_seg_gt = self.wilddash_mapper[sem_seg_gt.long()]

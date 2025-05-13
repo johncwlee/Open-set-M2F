@@ -1,0 +1,26 @@
+_BASE_: ../maskformer2_R50_bs16_90k.yaml
+MODEL:
+  BACKBONE:
+    NAME: "D2DinoVisionTransformer"
+  FREEZE_BACKBONE: True
+  WEIGHTS: "model_weights/dinov2_converted_1024x1024_p16_backbone.pth"
+  PIXEL_MEAN: [123.675, 116.280, 103.530]
+  PIXEL_STD: [58.395, 57.120, 57.375]
+  MASK_FORMER:
+    NUM_OBJECT_QUERIES: 100
+
+INPUT:
+  DATASET_MAPPER_NAME: "mask_former_semantic_traffic"
+SOLVER:
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.0001
+  MAX_ITER: 90000
+  CHECKPOINT_PERIOD: 10000
+TEST:
+  EVAL_PERIOD: 10000
+
+DATASETS:
+  TRAIN: ("cityscapes_fine_sem_seg_train",)
+  TEST: ("cityscapes_fine_sem_seg_val",)
+
+OUTPUT_DIR: './M2F_DINOv2_cityscapes+vistas_bs_16_90k'
