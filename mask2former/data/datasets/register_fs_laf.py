@@ -46,7 +46,7 @@ def load_fs_laf_val(root):
 
 
 def register_all_fs_laf(root):
-    root = os.path.join(root, "LostAndFound")
+    root = os.path.join(root, "fishyscapes", "LostAndFound")
     meta = _get_fs_laf_meta()
 
     DatasetCatalog.register(

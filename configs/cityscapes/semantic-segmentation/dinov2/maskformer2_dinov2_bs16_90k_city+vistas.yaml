@@ -20,7 +20,7 @@ TEST:
   EVAL_PERIOD: 10000
 
 DATASETS:
-  TRAIN: ("cityscapes_fine_sem_seg_train",)
+  TRAIN: ("mapillary_cityscapes_sem_seg_train", "cityscapes_fine_sem_seg_train")
   TEST: ("cityscapes_fine_sem_seg_val",)
 
 OUTPUT_DIR: './M2F_DINOv2_cityscapes+vistas_bs_16_90k'
