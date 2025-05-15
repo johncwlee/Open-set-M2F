@@ -334,17 +334,17 @@ class DinoVisionTransformer(nn.Module):
                 ret[3], scale_factor=0.5, mode="bilinear", align_corners=False
             )
         else:
-            #! Not supported yet
-            raise NotImplementedError()
-            ret[0][0] = F.interpolate(
+            features["res2"] = F.interpolate(
                 ret[0][0], scale_factor=4, mode="bilinear", align_corners=False
             )
-            ret[0][1] = F.interpolate(
+            features["res3"] = F.interpolate(
                 ret[0][1], scale_factor=2, mode="bilinear", align_corners=False
             )
-            ret[0][3] = F.interpolate(
+            features["res4"] = ret[0][2]
+            features["res5"] = F.interpolate(
                 ret[0][3], scale_factor=0.5, mode="bilinear", align_corners=False
             )
+            features["query_embeds"] = ret[1]
         return features
 
 
@@ -362,15 +362,9 @@ class D2DinoVisionTransformer(DinoVisionTransformer, Backbone):
             qkv_bias=True,
             ffn_bias=True,
             proj_bias=True,
-            drop_path_rate=0.0,
-            drop_path_uniform=False,
-            init_values=None,  # for layerscale: None or 0 => no layerscale
-            embed_layer=PatchEmbed,
-            act_layer=nn.GELU,
-            block_fn=partial(Block, attn_class=MemEffAttention),
+            init_values=1e-05,  # for layerscale: None or 0 => no layerscale
             ffn_layer="mlp",
             block_chunks=0,
-            out_indices=[7, 11, 15, 23],
         )
 
         self._out_features = cfg.MODEL.DINO_V2.OUT_FEATURES
