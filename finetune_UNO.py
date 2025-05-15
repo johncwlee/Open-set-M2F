@@ -364,24 +364,24 @@ def main(args):
         w = weights['model']['sem_seg_head.predictor.class_embed.bias']
         w_ = torch.cat((w[: -1], torch.tensor([0.0]).to(w.device), w[-1:]))
 
-        # if args.num_gpus > 1:
-        #     trainer.model.state_dict()['module.sem_seg_head.predictor.class_embed.bias'].data.copy_(w_)
-        # else:
-        #     trainer.model.state_dict()['sem_seg_head.predictor.class_embed.bias'].data.copy_(w_)
+        if args.num_gpus > 1:
+            trainer.model.state_dict()['module.sem_seg_head.predictor.class_embed.bias'].data.copy_(w_)
+        else:
+            trainer.model.state_dict()['sem_seg_head.predictor.class_embed.bias'].data.copy_(w_)
 
-        # w = weights['model']['sem_seg_head.predictor.class_embed.weight']
-        # w_ = torch.cat((w[: -1], torch.zeros(1, 256).to(w.device), w[-1:]), dim=0)
-        # if args.num_gpus > 1:
-        #     trainer.model.state_dict()['module.sem_seg_head.predictor.class_embed.weight'].data.copy_(w_)
-        # else:
-        #     trainer.model.state_dict()['sem_seg_head.predictor.class_embed.weight'].data.copy_(w_)
+        w = weights['model']['sem_seg_head.predictor.class_embed.weight']
+        w_ = torch.cat((w[: -1], torch.zeros(1, 256).to(w.device), w[-1:]), dim=0)
+        if args.num_gpus > 1:
+            trainer.model.state_dict()['module.sem_seg_head.predictor.class_embed.weight'].data.copy_(w_)
+        else:
+            trainer.model.state_dict()['sem_seg_head.predictor.class_embed.weight'].data.copy_(w_)
 
-        # w = weights['model']['criterion.empty_weight']
-        # w_ = torch.cat((w[: -1], torch.tensor([1.0]).to(w.device), w[-1:]))
-        # if args.num_gpus > 1:
-        #     trainer.model.state_dict()['module.criterion.empty_weight'].data.copy_(w_)
-        # else:
-        #     trainer.model.state_dict()['criterion.empty_weight'].data.copy_(w_) 
+        w = weights['model']['criterion.empty_weight']
+        w_ = torch.cat((w[: -1], torch.tensor([1.0]).to(w.device), w[-1:]))
+        if args.num_gpus > 1:
+            trainer.model.state_dict()['module.criterion.empty_weight'].data.copy_(w_)
+        else:
+            trainer.model.state_dict()['criterion.empty_weight'].data.copy_(w_) 
 
     return trainer.train()
 

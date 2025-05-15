@@ -373,7 +373,7 @@ class MaskFormerSemanticDatasetMapperWithUNO:
             binary_ood_lbl[ood_lbl == c] = 1
             binary_ood_lbl = np.uint8(binary_ood_lbl)
             if 'vistas' in sem_seg_file_name:
-                image, sem_seg_gt = self._paste_anomaly(image, sem_seg_gt, ood_image, binary_ood_lbl, 67)
+                image, sem_seg_gt = self._paste_anomaly(image, sem_seg_gt, ood_image, binary_ood_lbl, 66)
             else:
                 image, sem_seg_gt = self._paste_anomaly(image, sem_seg_gt, ood_image, binary_ood_lbl, 19)
         ##
@@ -413,9 +413,9 @@ class MaskFormerSemanticDatasetMapperWithUNO:
         if 'vistas' in sem_seg_file_name:
             sem_seg_gt = self.labels_mapping[sem_seg_gt.long()]
             dataset_dict["sem_seg"] = sem_seg_gt
-        elif 'wilddash' in sem_seg_file_name:
-            sem_seg_gt = self.wilddash_mapper[sem_seg_gt.long()]
-            dataset_dict["sem_seg"] = sem_seg_gt
+        # elif 'wilddash' in sem_seg_file_name:
+        #     sem_seg_gt = self.wilddash_mapper[sem_seg_gt.long()]
+        #     dataset_dict["sem_seg"] = sem_seg_gt
 
         if "annotations" in dataset_dict:
             raise ValueError("Semantic segmentation dataset should not have 'annotations'.")
