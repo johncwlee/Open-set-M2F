@@ -360,7 +360,7 @@ class MultiScaleMaskedTransformerDecoder(nn.Module):
 
         return ret
 
-    def forward(self, x, mask_features, mask = None):
+    def forward(self, x, mask_features, query_embed=None, mask=None):
         # x is a list of multi-scale feature
         assert len(x) == self.num_feature_levels
         src = []
@@ -368,7 +368,7 @@ class MultiScaleMaskedTransformerDecoder(nn.Module):
         size_list = []
 
         # disable mask, it does not affect performance
-        del mask
+        del query_embed, mask
 
         for i in range(self.num_feature_levels):
             size_list.append(x[i].shape[-2:])
